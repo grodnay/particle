@@ -71,12 +71,12 @@ void sf_packet::hexdump(void)
 int sf_protocol::write(void)
 {
     digitalWrite(rts_pin, HIGH);
-    int res = UART.write(out.buff, out.packet_length());
-    UART.flush();
     while (UART.available())
     {
         UART.read();
     }
+    int res = UART.write(out.buff, out.packet_length());
+    UART.flush();
     digitalWrite(rts_pin, LOW);
     request_time = millis();
     return res;

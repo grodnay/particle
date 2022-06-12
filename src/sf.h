@@ -48,6 +48,8 @@ public:
     void set_destination(uint8_t _destination) { out.destination = _destination; }
     int NOP(void);
     int GET_PARAM_2(uint16_t param_group, uint16_t &param);
+    int GET_STATE_VALUE_4(uint16_t param_group, uint32_t *param) {return transaction((uint8_t *)&param_group, 2, (uint8_t *)param, 4, 0x11, 20);}
+   // int get_encoder_angle(int32_t & angle){return GET_STATE_VALUE_4(0xc3, angle);}
     void print(void);
 };
 

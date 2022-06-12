@@ -5,6 +5,7 @@
 #include "SF.h"
 
 sf_protocol sf;
+int32_t res;
 
 void setup(void)
 {
@@ -12,17 +13,12 @@ void setup(void)
     sf.begin(RTS_PIN);
     delay(100);
     Serial.printf("End setup\n");
+    Particle.variable("Encoder",res);
 }
 
 long unsigned int i = 0;
 void loop(void)
 {
-    Serial.printf("%ld. NOP: (%d)\n", i++,sf.NOP());
-    sf.print();
-    delay(5);
-    uint16_t res;
-    Serial.printf("%ld. GET_PARAM2: (%d) %d\n",i++, sf.GET_PARAM_2(238, res), res);
-    sf.print();
-    Serial.printf("\n");
-    delay(1000);
+    Serial.printf("%ld. Encoder: (%d) %ld\n", i++, sf.GET_STATE_VALUE_4(195, (uint32_t *)&res), res);
+    delay(500);
 }
