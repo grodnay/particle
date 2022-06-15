@@ -90,7 +90,7 @@ int sf_protocol::read()
     return res;
 }
 
-int sf_protocol::transaction(const uint8_t *_parameter_data, uint8_t _param_length, uint8_t *_responce_param_data, uint8_t _responce_param_length, uint8_t _command_code, unsigned long int _timeout)
+int sf_protocol::transaction(uint8_t _command_code, const uint8_t *_parameter_data, uint8_t _param_length, uint8_t *_responce_param_data, uint8_t _responce_param_length, unsigned long int _timeout)
 {
     memcpy(out.parameter_data, _parameter_data, _param_length);
     out.command_code = _command_code;
@@ -108,10 +108,11 @@ int sf_protocol::transaction(const uint8_t *_parameter_data, uint8_t _param_leng
         required_pause = 5;
         int res = (in.decode() && (in.data_length == expected_responce_data_length) && (in.toggle == out.toggle) && (in.command_code == out.command_code) && (in.command_group == out.command_group) && (in.dir == 1));
         memcpy(_responce_param_data, in.parameter_data, _responce_param_length);
-        return res;
+        if (!res) return -2;
+        return in.error_code;
     }
     required_pause = 250;
-    return 0;
+    return -1;
 }
 
 void sf_protocol::begin(int _rts_pin)
@@ -122,14 +123,7 @@ void sf_protocol::begin(int _rts_pin)
     pinMode(rts_pin, OUTPUT);
     digitalWrite(rts_pin, LOW);
 }
-int sf_protocol::NOP(void)
-{
-    return transaction(NULL, 0, NULL, 0, 0x00, 20);
-}
-int sf_protocol::GET_PARAM_2(uint16_t param_group, uint16_t &param)
-{
-    return transaction((uint8_t *)&param_group, 2, (uint8_t *)&param, 2, 0x04, 20);
-}
+
 void sf_protocol::print(void)
 {
     Serial.printf("sent: ");

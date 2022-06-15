@@ -20,5 +20,7 @@ long unsigned int i = 0;
 void loop(void)
 {
     Serial.printf("%ld. Encoder: (%d) %ld\n", i++, sf.GET_STATE_VALUE_4(195, (uint32_t *)&res), res);
+    //char s[100]; sprintf(s,"%ld",res);
+    //Particle.publish("Encoder",String(res));
     delay(500);
 }
