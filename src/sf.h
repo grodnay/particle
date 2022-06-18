@@ -86,7 +86,7 @@ public:
     }
     int SAVE_PARAMETER_ALL(uint16_t unlock_code)
     {
-        return transaction(0x0B, (uint8_t *) &unlock_code, sizeof(unlock_code), NULL, 0, 20);
+        return transaction(0x0B, (uint8_t *)&unlock_code, sizeof(unlock_code), NULL, 0, 20);
     }
     int GET_STATE_VALUE_2(uint16_t status_number, uint16_t &status_value)
     {
@@ -127,34 +127,57 @@ class MySF : public sf_protocol
     const float rated_torqu = 2.0;
 
 public:
-    int get_torqu(float &t)
+    int get_torque(double &t)
     {
         int16_t mils;
         int res = GET_STATE_VALUE_2(113, (uint16_t &)mils);
         t = (float)mils * rated_torqu / 1000.0;
         return res;
     }
-    int get_rpm(int &rpm)
+    int get_rpm(int16_t &rpm)
     {
-        return GET_STATE_VALUE_2(113, (uint16_t &)rpm);
+        return GET_STATE_VALUE_2(98, (uint16_t &)rpm);
+    }
+    int get_encoder(int32_t  &count)
+    {
+        return GET_STATE_VALUE_4(195, (uint32_t *)&count);
     }
     int in_bit_on(int i)
     {
         uint16_t execution_res;
         uint32_t status_value;
-        return  SET_STATE_VALUE_WITHMASK_4(288, 1<<i, 1<<i, execution_res, status_value);
+        return SET_STATE_VALUE_WITHMASK_4(288, 1 << i, 1 << i, execution_res, status_value);
     }
     int in_bit_off(int i)
     {
         uint16_t execution_res;
         uint32_t status_value;
-        return  SET_STATE_VALUE_WITHMASK_4(288, 0, 1<<i, execution_res, status_value);
+        return SET_STATE_VALUE_WITHMASK_4(288, 0, 1 << i, execution_res, status_value);
     }
     int servo_on(void)
     {
         uint16_t execution_res;
         uint32_t status_value;
-        return  SET_STATE_VALUE_WITHMASK_4(288, 1, 1, execution_res, status_value);
+        return SET_STATE_VALUE_WITHMASK_4(288, 1, 1, execution_res, status_value);
+    }
+    int fw(void)
+    {
+        uint16_t execution_res;
+        uint32_t status_value;
+        return SET_STATE_VALUE_WITHMASK_4(288, 1<<25 , 1<<24 | 1<<25, execution_res, status_value);
+    }
+    int rev(void)
+    {  // bits int[]={0,13,15 19,20,21,22,24,26,27,28,29};
+        uint16_t execution_res;
+        uint32_t status_value;
+        return SET_STATE_VALUE_WITHMASK_4(288, 1<<24,1<<24 | 1<<25, execution_res, status_value);
+    }
+    int stop(void)
+    {  // bits int[]={0,13,15 19,20,21,22,24,26,27,28,29};
+        uint16_t execution_res;
+        uint32_t status_value;
+        return SET_STATE_VALUE_WITHMASK_4(288, 0, 0 | 1<<24 | 1<<25, execution_res, status_value);
+
     }
     int servo_off(void)
     {
@@ -162,5 +185,10 @@ public:
         uint32_t status_value;
         return SET_STATE_VALUE_WITHMASK_4(288, 0, 1, execution_res, status_value);
     }
+    int remote_operation(void)
+    {
+        return SET_PARAM_2(9,1);
+    }
 };
+enum vel_bits {VCRUN1=1<<24,VCRUN2=1<<25,VCSEL1=1<<26,VCSEL2=1<<27,VCSEL3=1<<28,SVON=0};
 #endif // SF_H

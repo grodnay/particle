@@ -100,7 +100,7 @@ int sf_protocol::transaction(uint8_t _command_code, const uint8_t *_parameter_da
     out.encode();
     actual_pause = millis() - respone_time;
     if (actual_pause < required_pause)
-        return 0;
+        delay(required_pause-actual_pause);
     write();
     expected_responce_data_length = _responce_param_length + 2;
     if (read() == expected_responce_data_length + 4)
