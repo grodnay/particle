@@ -100,7 +100,7 @@ int sf_protocol::transaction(uint8_t _command_code, const uint8_t *_parameter_da
     out.encode();
     actual_pause = millis() - respone_time;
     if (actual_pause < required_pause)
-        delay(required_pause-actual_pause);
+        delay(required_pause - actual_pause);
     write();
     expected_responce_data_length = _responce_param_length + 2;
     if (read() == expected_responce_data_length + 4)
@@ -108,7 +108,8 @@ int sf_protocol::transaction(uint8_t _command_code, const uint8_t *_parameter_da
         required_pause = 5;
         int res = (in.decode() && (in.data_length == expected_responce_data_length) && (in.toggle == out.toggle) && (in.command_code == out.command_code) && (in.command_group == out.command_group) && (in.dir == 1));
         memcpy(_responce_param_data, in.parameter_data, _responce_param_length);
-        if (!res) return -2;
+        if (!res)
+            return -2;
         return in.error_code;
     }
     required_pause = 250;
@@ -137,3 +138,75 @@ void sf_protocol::print(void)
     Serial.printf("act_p=%ld, ", actual_pause);
     Serial.printf("\n");
 }
+
+int sf_protocol::NOP(void)
+{
+    return transaction(0x00, NULL, 0, NULL, 0, 20);
+}
+int sf_protocol::GET_PARAM_2(uint16_t param_group, uint16_t &param)
+{
+    return transaction(0x04, (uint8_t *)&param_group, sizeof(param_group), (uint8_t *)&param, sizeof(param), 20);
+}
+int sf_protocol::GET_PARAM_4(uint16_t param_group, uint32_t &param)
+{
+    return transaction(0x05, (uint8_t *)&param_group, sizeof(param_group), (uint8_t *)param, sizeof(param), 20);
+}
+int sf_protocol::SET_PARAM_2(uint16_t param_group, uint16_t param)
+{
+    uint16_t buff[] = {param, param_group}; // reversed order because encoding will revrese the byte order
+    return transaction(0x07, (uint8_t *)&buff, sizeof(buff), NULL, 0, 20);
+}
+int sf_protocol::SET_PARAM_4(uint16_t param_group, uint32_t param)
+{
+#pragma pack(1)
+    struct
+    {
+        uint32_t param;
+        uint16_t param_group;
+    } buff = {param, param_group}; // reversed order because encoding will revrese the byte order
+#pragma pack(0)
+    return transaction(0x09, (uint8_t *)&buff, sizeof(buff), NULL, 0, 20);
+}
+int sf_protocol::GET_STATE_VALUE_4(uint16_t param_group, uint32_t *param)
+{
+    return transaction(0x11, (uint8_t *)&param_group, sizeof(param_group), (uint8_t *)param, sizeof(param), 20);
+}
+int sf_protocol::UNLOCK_PARAM_ALL(uint16_t *unlock_code)
+{
+    return transaction(0x0A, NULL, 0, (uint8_t *)unlock_code, sizeof(unlock_code), 20);
+}
+int sf_protocol::SAVE_PARAMETER_ALL(uint16_t unlock_code)
+{
+    return transaction(0x0B, (uint8_t *)&unlock_code, sizeof(unlock_code), NULL, 0, 20);
+}
+int sf_protocol::GET_STATE_VALUE_2(uint16_t status_number, uint16_t &status_value)
+{
+    return transaction(0x10, (uint8_t *)&status_number, sizeof(status_number),
+                       (uint8_t *)&status_value, sizeof(status_value), 20);
+}
+int sf_protocol::GET_STATE_VALUE_4(uint16_t status_number, uint32_t &status_value)
+{
+    return transaction(0x11, (uint8_t *)&status_number, sizeof(status_number),
+                       (uint8_t *)&status_value, sizeof(status_value), 20);
+}
+int sf_protocol::SET_STATE_VALUE_WITHMASK_4(uint16_t status_number, uint32_t status_value, uint32_t mask,
+                                            uint16_t &execution_result, uint32_t &status_value_returned)
+{
+#pragma pack(1)
+    struct
+    {
+        uint32_t mask, status_value;
+        uint16_t status_number;
+    } out_buff = {mask, status_value, status_number};
+    struct
+    {
+        uint32_t status_value;
+        uint16_t execution_result;
+    } in_buff;
+#pragma pack(0)
+    int ret = transaction(0x66, (uint8_t *)&out_buff, sizeof(out_buff), (uint8_t *)&in_buff, sizeof(in_buff), 20);
+    execution_result = in_buff.execution_result;
+    status_value_returned = in_buff.status_value;
+    return ret;
+}
+

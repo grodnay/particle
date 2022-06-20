@@ -2,6 +2,7 @@
 // Guy Rodnay
 #ifndef _SF_H_
 #define _SF_H_
+#include <Arduino.h>
 
 #define RTS_PIN 2
 #define PULSE_PIN 3
@@ -48,85 +49,34 @@ private:
 public:
     void begin(int _rts_pin = RTS_PIN);
     void set_destination(uint8_t _destination) { out.destination = _destination; }
-    int NOP(void)
-    {
-        return transaction(0x00, NULL, 0, NULL, 0, 20);
-    }
-    int GET_PARAM_2(uint16_t param_group, uint16_t &param)
-    {
-        return transaction(0x04, (uint8_t *)&param_group, sizeof(param_group), (uint8_t *)&param, sizeof(param), 20);
-    }
-    int GET_PARAM_4(uint16_t param_group, uint32_t &param)
-    {
-        return transaction(0x05, (uint8_t *)&param_group, sizeof(param_group), (uint8_t *)param, sizeof(param), 20);
-    }
-    int SET_PARAM_2(uint16_t param_group, uint16_t param)
-    {
-        uint16_t buff[] = {param, param_group}; // reversed order because encoding will revrese the byte order
-        return transaction(0x07, (uint8_t *)&buff, sizeof(buff), (uint8_t *)&param, sizeof(param), 20);
-    }
-    int SET_PARAM_4(uint16_t param_group, uint32_t param)
-    {
-#pragma pack(1)
-        struct
-        {
-            uint32_t param;
-            uint16_t param_group;
-        } buff = {param, param_group}; // reversed order because encoding will revrese the byte order
-#pragma pack(0)
-        return transaction(0x09, (uint8_t *)&buff, sizeof(buff), (uint8_t *)&param, sizeof(param), 20);
-    }
-    int GET_STATE_VALUE_4(uint16_t param_group, uint32_t *param)
-    {
-        return transaction(0x11, (uint8_t *)&param_group, sizeof(param_group), (uint8_t *)param, sizeof(param), 20);
-    }
-    int UNLOCK_PARAM_ALL(uint16_t *unlock_code)
-    {
-        return transaction(0x0A, NULL, 0, (uint8_t *)unlock_code, sizeof(unlock_code), 20);
-    }
-    int SAVE_PARAMETER_ALL(uint16_t unlock_code)
-    {
-        return transaction(0x0B, (uint8_t *)&unlock_code, sizeof(unlock_code), NULL, 0, 20);
-    }
-    int GET_STATE_VALUE_2(uint16_t status_number, uint16_t &status_value)
-    {
-        return transaction(0x10, (uint8_t *)&status_number, sizeof(status_number),
-                           (uint8_t *)&status_value, sizeof(status_value), 20);
-    }
-    int GET_STATE_VALUE_4(uint16_t status_number, uint32_t &status_value)
-    {
-        return transaction(0x11, (uint8_t *)&status_number, sizeof(status_number),
-                           (uint8_t *)&status_value, sizeof(status_value), 20);
-    }
+    int NOP(void);
+    int GET_PARAM_2(uint16_t param_group, uint16_t &param);
+    int GET_PARAM_4(uint16_t param_group, uint32_t &param);
+    int SET_PARAM_2(uint16_t param_group, uint16_t param);
+    int SET_PARAM_4(uint16_t param_group, uint32_t param);
+    int GET_STATE_VALUE_4(uint16_t param_group, uint32_t *param);
+    int UNLOCK_PARAM_ALL(uint16_t *unlock_code);
+    int SAVE_PARAMETER_ALL(uint16_t unlock_code);
+    int GET_STATE_VALUE_2(uint16_t status_number, uint16_t &status_value);
+    int GET_STATE_VALUE_4(uint16_t status_number, uint32_t &status_value);
     int SET_STATE_VALUE_WITHMASK_4(uint16_t status_number, uint32_t status_value, uint32_t mask,
-                                   uint16_t &execution_result, uint32_t &status_value_returned)
-    {
-#pragma pack(1)
-        struct
-        {
-            uint32_t mask, status_value;
-            uint16_t status_number;
-        } out_buff = {mask, status_value, status_number};
-        struct
-        {
-            uint32_t status_value;
-            uint16_t execution_result;
-        } in_buff;
-#pragma pack(0)
-        int ret = transaction(0x66, (uint8_t *)&out_buff, sizeof(out_buff), (uint8_t *)&in_buff, sizeof(in_buff), 20);
-        execution_result = in_buff.execution_result;
-        status_value_returned = in_buff.status_value;
-        return ret;
-    }
-    // int get_encoder_angle(int32_t & angle){return GET_STATE_VALUE_4(0xc3, angle);}
+                                   uint16_t &execution_result, uint32_t &status_value_returned);
     void print(void);
 };
 
 class MySF : public sf_protocol
 {
-    const float rated_torqu = 2.0;
+    const float rated_torqu = 2.39; // reduction = 15.0, wheel_diameter=0.2;
+    const uint8_t pulse_pin = PULSE_PIN, dir_pin = DIR_PIN;
 
 public:
+    void begin(void)
+    {
+        sf_protocol::begin();
+        pinMode(dir_pin, OUTPUT);
+        pinMode(pulse_pin, OUTPUT);
+        noTone(pulse_pin);
+    }
     int get_torque(double &t)
     {
         int16_t mils;
@@ -138,10 +88,11 @@ public:
     {
         return GET_STATE_VALUE_2(98, (uint16_t &)rpm);
     }
-    int get_encoder(int32_t  &count)
+    int get_encoder(int32_t &count)
     {
         return GET_STATE_VALUE_4(195, (uint32_t *)&count);
     }
+
     int in_bit_on(int i)
     {
         uint16_t execution_res;
@@ -154,41 +105,77 @@ public:
         uint32_t status_value;
         return SET_STATE_VALUE_WITHMASK_4(288, 0, 1 << i, execution_res, status_value);
     }
+    enum vel_bits
+    {
+        VCRUN1 = 1 << 24,
+        VCRUN2 = 1 << 25,
+        VCSEL1 = 1 << 26,
+        VCSEL2 = 1 << 27,
+        VCSEL3 = 1 << 28,
+        SVON = 1 << 1
+    };
     int servo_on(void)
     {
         uint16_t execution_res;
         uint32_t status_value;
-        return SET_STATE_VALUE_WITHMASK_4(288, 1, 1, execution_res, status_value);
-    }
-    int fw(void)
-    {
-        uint16_t execution_res;
-        uint32_t status_value;
-        return SET_STATE_VALUE_WITHMASK_4(288, 1<<25 , 1<<24 | 1<<25, execution_res, status_value);
-    }
-    int rev(void)
-    {  // bits int[]={0,13,15 19,20,21,22,24,26,27,28,29};
-        uint16_t execution_res;
-        uint32_t status_value;
-        return SET_STATE_VALUE_WITHMASK_4(288, 1<<24,1<<24 | 1<<25, execution_res, status_value);
-    }
-    int stop(void)
-    {  // bits int[]={0,13,15 19,20,21,22,24,26,27,28,29};
-        uint16_t execution_res;
-        uint32_t status_value;
-        return SET_STATE_VALUE_WITHMASK_4(288, 0, 0 | 1<<24 | 1<<25, execution_res, status_value);
-
+        return SET_STATE_VALUE_WITHMASK_4(288, SVON, SVON, execution_res, status_value);
     }
     int servo_off(void)
     {
         uint16_t execution_res;
         uint32_t status_value;
-        return SET_STATE_VALUE_WITHMASK_4(288, 0, 1, execution_res, status_value);
+        return SET_STATE_VALUE_WITHMASK_4(288, 0, SVON, execution_res, status_value);
     }
-    int remote_operation(void)
+    int fw(void)
     {
-        return SET_PARAM_2(9,1);
+        uint16_t execution_res;
+        uint32_t status_value;
+        return SET_STATE_VALUE_WITHMASK_4(288, VCRUN2, VCRUN1 | VCRUN2, execution_res, status_value);
+    }
+    int rev(void)
+    {
+        uint16_t execution_res;
+        uint32_t status_value;
+        return SET_STATE_VALUE_WITHMASK_4(288, VCRUN1, VCRUN1 | VCRUN2, execution_res, status_value);
+    }
+    int stop(void)
+    {
+        ;
+        uint16_t execution_res;
+        uint32_t status_value;
+        return SET_STATE_VALUE_WITHMASK_4(288, 0, VCRUN1 | VCRUN2, execution_res, status_value);
+    }
+    int set_speed(uint i)
+    {
+        uint32_t speed[] = {0, VCSEL1, VCSEL2, VCSEL1 | VCSEL2, VCSEL3, VCSEL3 | VCSEL1, VCSEL3 | VCSEL2, VCSEL3 | VCSEL1 | VCSEL2};
+        i--;
+        i = min(i, sizeof(speed));
+        uint16_t execution_res;
+        uint32_t status_value;
+        return SET_STATE_VALUE_WITHMASK_4(288, 0, speed[i], execution_res, status_value);
+    }
+
+    int set_ext_speed(int frequency, uint long duration = 5)
+    {
+        digitalWrite(dir_pin, (frequency > 0));
+        if (frequency == 0)
+            noTone(pulse_pin);
+        else
+            tone(pulse_pin, abs(frequency), duration);
+        return 1;
+    }
+    int control_mode(uint16_t mode = 0)
+    {
+        return SET_PARAM_2(2, mode);
+    }
+    int command_mode(uint16_t mode = 1)
+    {
+        return SET_PARAM_2(3, mode);
+    }
+    int input_pulse_form(uint16_t mode = 0);
+    int operation_mode(uint16_t bit = 1)
+    {
+        return SET_PARAM_2(9, bit);
     }
 };
-enum vel_bits {VCRUN1=1<<24,VCRUN2=1<<25,VCSEL1=1<<26,VCSEL2=1<<27,VCSEL3=1<<28,SVON=0};
 #endif // SF_H
