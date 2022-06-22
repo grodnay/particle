@@ -68,13 +68,16 @@ class MySF : public sf_protocol
 {
     const float rated_torqu = 2.39; // reduction = 15.0, wheel_diameter=0.2;
     const uint8_t pulse_pin = PULSE_PIN, dir_pin = DIR_PIN;
+    const uint long count_per_revolution = 2 ^ 17;
 
 public:
     void begin(void)
     {
         sf_protocol::begin();
         pinMode(dir_pin, OUTPUT);
+        pinSetDriveStrength(dir_pin, DriveStrength::STANDARD);
         pinMode(pulse_pin, OUTPUT);
+        pinSetDriveStrength(pulse_pin, DriveStrength::STANDARD);
         noTone(pulse_pin);
     }
     int get_torque(double &t)
@@ -112,7 +115,7 @@ public:
         VCSEL1 = 1 << 26,
         VCSEL2 = 1 << 27,
         VCSEL3 = 1 << 28,
-        SVON = 1 << 1
+        SVON = 1 << 0
     };
     int servo_on(void)
     {
@@ -148,11 +151,12 @@ public:
     int set_speed(uint i)
     {
         uint32_t speed[] = {0, VCSEL1, VCSEL2, VCSEL1 | VCSEL2, VCSEL3, VCSEL3 | VCSEL1, VCSEL3 | VCSEL2, VCSEL3 | VCSEL1 | VCSEL2};
+        i = max(1, min(abs(i), sizeof(speed) / sizeof(speed[0])));
         i--;
-        i = min(i, sizeof(speed));
+        Serial.printf("i=%d\n", i);
         uint16_t execution_res;
         uint32_t status_value;
-        return SET_STATE_VALUE_WITHMASK_4(288, 0, speed[i], execution_res, status_value);
+        return SET_STATE_VALUE_WITHMASK_4(288, speed[i], VCSEL1 | VCSEL2 | VCSEL3, execution_res, status_value);
     }
 
     int set_ext_speed(int frequency, uint long duration = 5)
@@ -161,7 +165,10 @@ public:
         if (frequency == 0)
             noTone(pulse_pin);
         else
+        {
+            noTone(pulse_pin);
             tone(pulse_pin, abs(frequency), duration);
+        }
         return 1;
     }
     int control_mode(uint16_t mode = 0)

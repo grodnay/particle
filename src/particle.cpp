@@ -31,7 +31,7 @@ int move(String s)
     }
     else if (rpm_cmd < 0)
     {
-        sf.set_speed(rpm_cmd);
+        sf.set_speed(abs(rpm_cmd));
         sf.rev();
     }
     else
@@ -49,7 +49,7 @@ int bit_off(String s)
 int ext_speed(String s)
 {
     int rpm_cmd = s.toInt();
-    return sf.set_ext_speed(rpm_cmd);
+    return sf.set_ext_speed(rpm_cmd,0);
 }
 
 void setup(void)
@@ -62,21 +62,23 @@ void setup(void)
     Particle.variable("Torque", torque);
     Particle.function("bit_on", bit_on);
     Particle.function("bit_off", bit_off);
-    Particle.function("cmd", move);
-
+    Particle.function("int_cmd", move);
+    Particle.function("ext_cmd", ext_speed);
     Serial.printf("End setup\n");
 }
 
 long unsigned int i = 0;
 void loop(void)
 {
-
+    //sf.operation_mode(1);
+    //sf.servo_on();
     Serial.printf("%ld. Encoder: (%d) %ld\n", i++, sf.get_encoder(enc), enc);
     Serial.printf("%ld. rpm: (%d) %d\n", i++, sf.get_rpm(tmp), tmp);
     rpm = tmp;
     Serial.printf("%ld. torque: (%d) %2.2f\n", i++, sf.get_torque(torque), torque);
-    Serial.printf("%ld. Remote op: (%d)\n", i++, sf.operation_mode());
+    //Serial.printf("%ld. Remote op: (%d)\n", i++, sf.operation_mode());
     // Serial.printf("%ld. Servo on: (%d)\n", i++, sf.servo_on());
+    Serial.printf("\n");
 
     delay(500);
 }
