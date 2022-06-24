@@ -8,6 +8,7 @@
 #define PULSE_PIN 3
 #define DIR_PIN 4
 #define UART Serial1
+#define ETHERNET_CS_PIN 10
 class sf_packet
 {
 public:
