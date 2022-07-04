@@ -4,11 +4,15 @@
 #define _SF_H_
 #include <Arduino.h>
 
-#define RTS_PIN 2
-#define PULSE_PIN 3
-#define DIR_PIN 4
+#define RTS_PIN A5
+#define PULSE_PIN D8
+#define DIR_PIN D7
+#define SVON_PIN D3
+#define RESET_PIN D4
+#define PCLR_PIN D5
+
 #define UART Serial1
-#define ETHERNET_CS_PIN 10
+
 class sf_packet
 {
 public:
@@ -68,7 +72,7 @@ public:
 class MySF : public sf_protocol
 {
     const float rated_torqu = 2.39; // reduction = 15.0, wheel_diameter=0.2;
-    const uint8_t pulse_pin = PULSE_PIN, dir_pin = DIR_PIN;
+    const uint8_t pulse_pin = PULSE_PIN, dir_pin = DIR_PIN, svon_pin = SVON_PIN, reset_pin = RESET_PIN, pclr_pin = PCLR_PIN;
     const uint long count_per_revolution = 2 ^ 17;
 
 public:
@@ -76,10 +80,11 @@ public:
     {
         sf_protocol::begin();
         pinMode(dir_pin, OUTPUT);
-        pinSetDriveStrength(dir_pin, DriveStrength::STANDARD);
         pinMode(pulse_pin, OUTPUT);
-        pinSetDriveStrength(pulse_pin, DriveStrength::STANDARD);
         noTone(pulse_pin);
+        pinMode(reset_pin, OUTPUT);
+        pinMode(svon_pin, OUTPUT);
+        pinMode(pclr_pin, OUTPUT);
     }
     int get_torque(double &t)
     {
@@ -184,6 +189,25 @@ public:
     int operation_mode(uint16_t bit = 1)
     {
         return SET_PARAM_2(9, bit);
+    }
+    int set_svon(int i)
+    {
+        digitalWrite(svon_pin, i);
+        return 1;
+    }
+    int reset()
+    {
+        digitalWrite(reset_pin, 1);
+        delay(250);
+        digitalWrite(reset_pin, 0);
+        return 1;
+    }
+    int pclr()
+    {
+        digitalWrite(pclr_pin, 1);
+        delay(250);
+        digitalWrite(pclr_pin, 0);
+        return 1;
     }
 };
 #endif // SF_H
