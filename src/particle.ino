@@ -104,27 +104,6 @@ void setup(void)
     Particle.function("reset", rst);            //Reset: Ignores the argument
     Particle.function("pclr", pclr);            //Counter clear: Ignores the argument
     Particle.function("pump", pump);            //Pump: On=1, Off=0
-    /* How to test
-    Danger: High voltage on servo controller, power supply and motor!!!! Red switched on rail kills high voltage.
-    Make sure motor is clampt 
-    *Turn little toggle switch on. If andy problem accures - turn it off. 
-    0. Put target metal agains limit senstors
-    1. Send Pump on - Red led comes on
-    2. Send Power on - Green led on and system comes up
-    3. All variables are initialized to 0, and hold last sucssesful measurment value
-    4. Pressure sensore is alwayes on, and should give: 270~280.
-    5. Send servo on 
-    6. Send forwad, reverse and stop commands. observe variables
-    7. Remove target from limit sensors
-    8. Error comes on the black controller and motor stops
-    9. Return target to limit switch
-    10. send pclear
-    11. motor resumes
-    12. send servo off. motor stops
-    13. pump off, power off
-    14. reset test - t.b.d
-    */
-
 
     pinMode(POWER_PIN, OUTPUT);
     digitalWrite(POWER_PIN, LOW);
