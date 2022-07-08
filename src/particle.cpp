@@ -26,11 +26,11 @@ void loop(void);
 #define REVERSE_PIN A1
 
 MySF sf;
-int32_t enc;
-int16_t tmp;
-int rpm, rpm_cmd;
-double torque;
-int32_t pressure;
+int32_t enc=0;
+int16_t tmp=0;
+int32_t rpm=0, rpm_cmd;
+double torque=0.0;
+int32_t pressure=0;
 // int move(String s)
 // {
 //     int rpm_cmd = s.toInt();
@@ -107,17 +107,37 @@ void setup(void)
     Particle.variable("Encoder", enc);
     Particle.variable("RPM", rpm);
     Particle.variable("Torque", torque);
-    Particle.variable("Pressure", torque);
+    Particle.variable("Pressure", pressure);
 
     // Particle.function("bit_on", bit_on);
     // Particle.function("bit_off", bit_off);
     // Particle.function("int_cmd", move);
-    Particle.function("ext_cmd", ext_speed);
-    Particle.function("power", power);
-    Particle.function("svon", svon);
-    Particle.function("reset", rst);
-    Particle.function("pclr", pclr);
-    Particle.function("pump", pump);
+    Particle.function("ext_cmd", ext_speed);    //Move the motor: Reverse=-500, Stop=0, Forward=500. Careful; There in no protection from overspeed
+    Particle.function("power", power);          //Power: On=1, Off=0
+    Particle.function("svon", svon);            //Servo: On=1, Off=0
+    Particle.function("reset", rst);            //Reset: Ignores the argument
+    Particle.function("pclr", pclr);            //Counter clear: Ignores the argument
+    Particle.function("pump", pump);            //Pump: On=1, Off=0
+    /* How to test
+    -2 Danger: High voltage on servo controller, power supply and motor!!!!
+    -1. Make sure motor is clampt 
+    0. Put target metal agains limit senstors
+    1. Send Pump on - Red led comes on
+    2. Send Power on - Green led on and system comes up
+    3. All variables are initialized to 0, and hold last sucssesful measurment value
+    4. Pressure sensore is alwayes on, and should give: 270~280.
+    5. Send servo on 
+    6. Send forwad, reverse and stop commands. observe variables
+    7. Remove target from limit sensors
+    8. Error comes on the black controller and motor stops
+    9. Return target to limit switch
+    10. send pclear
+    11. motor resumes
+    12. send servo off. motor stops
+    13. pump off, power off
+    14. reset test - t.b.d
+    */
+
 
     pinMode(POWER_PIN, OUTPUT);
     digitalWrite(POWER_PIN, LOW);
@@ -138,12 +158,12 @@ void loop(void)
     // sf.servo_on();
     Serial.printf("%ld. Encoder: (%d) %ld\n", i++, sf.get_encoder(enc), enc);
     Serial.printf("%ld. rpm: (%d) %d\n", i++, sf.get_rpm(tmp), tmp);
-    rpm = tmp;
+    rpm=int32_t(tmp);
     Serial.printf("%ld. torque: (%d) %2.2f\n", i++, sf.get_torque(torque), torque);
     // Serial.printf("%ld. Remote op: (%d)\n", i++, sf.operation_mode());
     //   Serial.printf("%ld. Servo on: (%d)\n", i++, sf.servo_on());
     Serial.printf("\n");
-    Serial.printf("RSFP: %ld%ld%ld%ld\n", digitalRead(REVERSE_PIN), digitalRead(STOP_PIN), digitalRead(FORWARD_PIN), analogRead(PRESSURE_PIN));
+    Serial.printf("RSFP: %ld%ld%ld %ld\n", digitalRead(REVERSE_PIN), digitalRead(STOP_PIN), digitalRead(FORWARD_PIN), analogRead(PRESSURE_PIN));
     if (!digitalRead(STOP_PIN))
         ext_speed("0");
     else if (!digitalRead(REVERSE_PIN))

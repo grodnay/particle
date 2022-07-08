@@ -71,7 +71,7 @@ public:
 
 class MySF : public sf_protocol
 {
-    const float rated_torqu = 2.39; // reduction = 15.0, wheel_diameter=0.2;
+    const double rated_torqu = 2.39; // reduction = 15.0, wheel_diameter=0.2;
     const uint8_t pulse_pin = PULSE_PIN, dir_pin = DIR_PIN, svon_pin = SVON_PIN, reset_pin = RESET_PIN, pclr_pin = PCLR_PIN;
     const uint long count_per_revolution = 2 ^ 17;
 
@@ -90,7 +90,7 @@ public:
     {
         int16_t mils;
         int res = GET_STATE_VALUE_2(113, (uint16_t &)mils);
-        t = (float)mils * rated_torqu / 1000.0;
+        t = double(mils) * rated_torqu / 1000.0;
         return res;
     }
     int get_rpm(int16_t &rpm)
