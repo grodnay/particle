@@ -5,11 +5,11 @@
 #include <Arduino.h>
 
 #define RTS_PIN A5
-#define PULSE_PIN D8
-#define DIR_PIN D7
-#define SVON_PIN D3
-#define RESET_PIN D4
-#define PCLR_PIN D5
+#define PULSE_PIN D6
+#define DIR_PIN D5
+#define SVON_PIN D2
+#define RESET_PIN D3
+#define PCLR_PIN D4
 
 #define UART Serial1
 

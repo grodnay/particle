@@ -4,8 +4,8 @@
 #include <string.h>
 #include "SF.h"
 
-#define POWER_PIN D6
-#define PUMP_PIN D2
+#define POWER_PIN D8
+#define PUMP_PIN D7
 #define PRESSURE_PIN A0
 #define FORWARD_PIN A3
 #define STOP_PIN A2
@@ -16,6 +16,7 @@ int32_t enc;
 int16_t tmp;
 int rpm, rpm_cmd;
 double torque;
+int32_t pressure;
 // int move(String s)
 // {
 //     int rpm_cmd = s.toInt();
@@ -92,15 +93,17 @@ void setup(void)
     Particle.variable("Encoder", enc);
     Particle.variable("RPM", rpm);
     Particle.variable("Torque", torque);
+    Particle.variable("Pressure", pressure);
+
     // Particle.function("bit_on", bit_on);
     // Particle.function("bit_off", bit_off);
     // Particle.function("int_cmd", move);
-    Particle.function("ext_cmd", ext_speed);
-    Particle.function("power", power);
-    Particle.function("svon", svon);
-    Particle.function("reset", rst);
-    Particle.function("pclr", pclr);
-    Particle.function("pump", pump);
+    Particle.function("ext_cmd", ext_speed);    //Move the motor: Reverse=-500, Stop=0, Forward=500
+    Particle.function("power", power);          //Power: On=1, Off=0
+    Particle.function("svon", svon);            //Servo: On=1, Off=0
+    Particle.function("reset", rst);            //Reset: Ignores the argument
+    Particle.function("pclr", pclr);            //Counter clear: Ignores the argument
+    Particle.function("pump", pump);            //Pump: On=1, Off=0
 
     pinMode(POWER_PIN, OUTPUT);
     digitalWrite(POWER_PIN, LOW);
@@ -126,7 +129,14 @@ void loop(void)
     // Serial.printf("%ld. Remote op: (%d)\n", i++, sf.operation_mode());
     //   Serial.printf("%ld. Servo on: (%d)\n", i++, sf.servo_on());
     Serial.printf("\n");
-    Serial.printf("RSFP: %ld%ld%ld%ld\n", digitalRead(REVERSE_PIN), digitalRead(STOP_PIN), digitalRead(FORWARD_PIN), analogRead(A0));
+    Serial.printf("RSFP: %ld%ld%ld%ld\n", digitalRead(REVERSE_PIN), digitalRead(STOP_PIN), digitalRead(FORWARD_PIN), analogRead(PRESSURE_PIN));
+    if (!digitalRead(STOP_PIN))
+        ext_speed("0");
+    else if (!digitalRead(REVERSE_PIN))
+        ext_speed("-500");
+    else if (!digitalRead(FORWARD_PIN))
+        ext_speed("500");
+    pressure=analogRead(PRESSURE_PIN);
 
     delay(500);
 }
