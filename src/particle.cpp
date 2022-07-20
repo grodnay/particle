@@ -7,8 +7,9 @@
 //#include <LibPrintf.h>
 #include <stdio.h>
 #include <string.h>
-#include "SF.h"
-
+#include "sf.h"
+#include <Particle.h>
+void StatusdThreadFunction(void);
 int svon(String s);
 int rst(String s);
 int pclr(String s);
@@ -18,6 +19,9 @@ int pump(String s);
 void setup(void);
 void loop(void);
 #line 7 "/Users/guyrodnay/Dropbox/Guy/work/2022/pv/code/particle/src/particle.ino"
+SYSTEM_THREAD(ENABLED);
+SerialLogHandler logHandler;
+
 #define POWER_PIN D8
 #define PUMP_PIN D7
 #define PRESSURE_PIN A0
@@ -27,46 +31,64 @@ void loop(void);
 
 MySF sf;
 int32_t enc = 0;
-int16_t tmp = 0;
-int32_t rpm = 0, rpm_cmd;
+int32_t rpm = 0;
 double torque = 0.0;
 int32_t pressure = 0;
 int32_t alarmm = 0;
 int32_t warn = 0;
 int32_t io_status = 0;
 int res = 0;
-// int move(String s)
-// {
-//     int rpm_cmd = s.toInt();
-//     if (rpm_cmd > 0)
-//     {
-//         sf.set_speed(rpm_cmd);
-//         sf.fw();
-//     }
-//     else if (rpm_cmd < 0)
-//     {
-//         sf.set_speed(abs(rpm_cmd));
-//         sf.rev();
-//     }
-//     else
-//         sf.stop();
-//     return rpm_cmd;
-// }
-// int bit_on(String s)
-// {
-//     return sf.in_bit_on(s.toInt());
-// }
-// int bit_off(String s)
-// {
-//     return sf.in_bit_off(s.toInt());
-// }
-// int servo(String s)
-// {
-//     int cmd = s.toInt();
-//     if (cmd > 0)
-//         return sf.servo_on();
-//     return sf.servo_off();
-// }
+int dirty=1;
+
+void StatusdThreadFunction(void)
+{
+    unsigned long int timeout=100, t0 = millis();
+    while (true)
+    {
+        int16_t tmp = 0;
+        uint16_t utmp;
+        int res = TRUE;
+
+        res = (res && (sf.get_encoder(enc) >= 0));
+
+        res = (res && (sf.get_io(utmp) >= 0));
+        io_status = utmp;
+
+        res = (res && (sf.get_rpm(tmp) >= 0));
+        rpm = int32_t(tmp);
+
+        res = (res && (sf.get_io(utmp) >= 0));
+        io_status = utmp;
+
+        res = (res && (sf.get_torque(torque) >= 0));
+
+        res = (res && (sf.get_io(utmp) >= 0));
+        io_status = utmp;
+
+        // res = sf.get_alarm(alarmm);
+
+        // sf.get_io(utmp);
+        // io_status = utmp;
+
+        // sf.get_warning(utmp);
+        // warn = utmp;
+
+        // sf.get_io(utmp);
+        // io_status = utmp;
+
+        pressure = analogRead(PRESSURE_PIN);
+
+        if (res)
+        {
+            t0 = millis();
+            dirty = 0;
+        }
+        if (millis() - t0 > timeout)
+            dirty = 1;
+    }
+    // You must not return from the thread function
+}
+
 int svon(String s)
 {
     return sf.set_svon(s.toInt());
@@ -83,16 +105,6 @@ int ext_speed(String s)
 {
     int rpm_cmd = s.toInt();
     rpm_cmd = constrain(rpm_cmd, -500, 500);
-    if ((warn != 0) || (alarmm != 0))
-    {
-        sf.set_ext_speed(0, 0);
-        delay(1000);
-
-        sf.reset();
-        delay(1000);
-    }
-    sf.set_svon(1);
-    delay(1000);
     return sf.set_ext_speed(rpm_cmd, 0);
 }
 int power(String s)
@@ -116,9 +128,9 @@ int pump(String s)
 
 void setup(void)
 {
-    Serial.begin(115200);
+    //   Serial.begin(115200);
     sf.begin();
-    delay(100);
+    //   delay(100);
     Particle.variable("Encoder", enc);
     Particle.variable("RPM", rpm);
     Particle.variable("Torque", torque);
@@ -145,9 +157,9 @@ void setup(void)
     pinMode(FORWARD_PIN, INPUT_PULLUP);
     pinMode(STOP_PIN, INPUT_PULLUP);
     pinMode(REVERSE_PIN, INPUT_PULLUP);
-
-    delay(500);
-    Serial.printf("End setup\n");
+    // delay(500);
+    // Serial.printf("End setup\n");
+    new Thread("StatusThread", StatusdThreadFunction);
 }
 
 long unsigned int i = 0;
@@ -167,17 +179,6 @@ void loop(void)
     // Serial.printf("\n");
     // Serial.printf("RSFP: %ld%ld%ld %ld\n", digitalRead(REVERSE_PIN), digitalRead(STOP_PIN), digitalRead(FORWARD_PIN), analogRead(PRESSURE_PIN));
 
-    sf.get_encoder(enc);
-    sf.get_rpm(tmp);
-    rpm = int32_t(tmp);
-    sf.get_torque(torque);
-    res = sf.get_alarm(alarmm);
-    uint16_t utmp;
-    sf.get_warning(utmp);
-    warn = utmp;
-    sf.get_io(utmp);
-    io_status = utmp;
-
     if ((io_status & (1 << 14)) == 0)
         ext_speed("500");
     else if ((io_status & (1 << 13)) == 0)
@@ -192,7 +193,6 @@ void loop(void)
         ext_speed("-500");
     else if (!digitalRead(FORWARD_PIN))
         ext_speed("500");
-    pressure = analogRead(PRESSURE_PIN);
 
     // delay(500);
 }

@@ -5,6 +5,9 @@
 
 #include "sf.h"
 #include "crc16.h"
+#include <Particle.h>
+extern SerialLogHandler logHandler;
+
 
 uint16_t sf_packet::calc_crc16(void) const
 {
@@ -44,28 +47,28 @@ int sf_packet::decode(void)
 
 void sf_packet::print(void)
 {
-    Serial.printf("len=%d, des=%d, tog=%d, dir=%d, err=%d, cod=0x%X, grp=%d, ", data_length, destination, toggle, dir, error_code, command_code, command_group);
+    Log.info("len=%d, des=%d, tog=%d, dir=%d, err=%d, cod=0x%X, grp=%d, ", data_length, destination, toggle, dir, error_code, command_code, command_group);
     if (param_length() > 0)
     {
-        Serial.printf("0x");
+        Log.info("0x");
         for (int i = 0; i < param_length(); i++)
-            Serial.printf("%X", parameter_data[i]);
+            Log.info("%X", parameter_data[i]);
     }
     else
-        Serial.printf("None");
-    Serial.printf(", crc=0x%02X", crc);
+        Log.info("None");
+    Log.info(", crc=0x%02X", crc);
     if (check_crc())
-        Serial.printf("(ok)");
+        Log.info("(ok)");
     else
-        Serial.printf("(BAD CRC!)");
-    Serial.printf("\n");
+        Log.info("(BAD CRC!)");
+    Log.info("\n");
 }
 
 void sf_packet::hexdump(void)
 {
     for (int i = 0; i < packet_length(); i++)
-        Serial.printf("%02X ", buff[i]);
-    Serial.printf("\n");
+        Log.info("%02X ", buff[i]);
+    Log.info("\n");
 }
 
 int sf_protocol::write(void)
@@ -75,8 +78,10 @@ int sf_protocol::write(void)
     {
         UART.read();
     }
+    int buf_size = UART.availableForWrite();
     int res = UART.write(out.buff, out.packet_length());
-    UART.flush();
+    while (buf_size > UART.availableForWrite())
+        os_thread_yield();
     digitalWrite(rts_pin, LOW);
     request_time = millis();
     return res;
@@ -84,8 +89,23 @@ int sf_protocol::write(void)
 
 int sf_protocol::read()
 {
-    UART.setTimeout(timeout);
-    int res = UART.readBytes((char *)in.buff, expected_responce_data_length + 4);
+    // UART.setTimeout(timeout);
+    unsigned long int t0 = millis();
+    int res;
+    while (TRUE)
+    {
+        if (millis() - t0 > timeout)
+        {
+            res = -1;
+            break;
+        }
+        if (UART.available() >= expected_responce_data_length + 4)
+        {
+            res = UART.readBytes((char *)in.buff, expected_responce_data_length + 4);
+            break;
+        }
+        os_thread_yield();
+    }
     respone_time = millis();
     return res;
 }
@@ -112,6 +132,7 @@ int sf_protocol::transaction(uint8_t _command_code, const uint8_t *_parameter_da
             return -2;
         return in.error_code;
     }
+    //else
     required_pause = 250;
     return -1;
 }
@@ -127,16 +148,16 @@ void sf_protocol::begin(int _rts_pin)
 
 void sf_protocol::print(void)
 {
-    Serial.printf("sent: ");
+    Log.info("sent: ");
     out.print();
-    Serial.printf("got: ");
+    Log.info("got: ");
     in.print();
-    Serial.printf("exp_len=%d, ", expected_responce_data_length);
-    Serial.printf("to=%ld, ", timeout);
-    Serial.printf("t=%ld ", respone_time - request_time);
-    Serial.printf("req_p=%ld, ", required_pause);
-    Serial.printf("act_p=%ld, ", actual_pause);
-    Serial.printf("\n");
+    Log.info("exp_len=%d, ", expected_responce_data_length);
+    Log.info("to=%ld, ", timeout);
+    Log.info("t=%ld ", respone_time - request_time);
+    Log.info("req_p=%ld, ", required_pause);
+    Log.info("act_p=%ld, ", actual_pause);
+    Log.info("\n");
 }
 
 int sf_protocol::NOP(void)
@@ -209,4 +230,3 @@ int sf_protocol::SET_STATE_VALUE_WITHMASK_4(uint16_t status_number, uint32_t sta
     status_value_returned = in_buff.status_value;
     return ret;
 }
-

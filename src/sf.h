@@ -113,69 +113,7 @@ public:
     {
         return GET_STATE_VALUE_2(16, io_bits);
     }
-    // int in_bit_on(int i)
-    // {
-    //     uint16_t execution_res;
-    //     uint32_t status_value;
-    //     return SET_STATE_VALUE_WITHMASK_4(288, 1 << i, 1 << i, execution_res, status_value);
-    // }
-    // int in_bit_off(int i)
-    // {
-    //     uint16_t execution_res;
-    //     uint32_t status_value;
-    //     return SET_STATE_VALUE_WITHMASK_4(288, 0, 1 << i, execution_res, status_value);
-    // }
-    // enum vel_bits
-    // {
-    //     VCRUN1 = 1 << 24,
-    //     VCRUN2 = 1 << 25,
-    //     VCSEL1 = 1 << 26,
-    //     VCSEL2 = 1 << 27,
-    //     VCSEL3 = 1 << 28,
-    //     SVON = 1 << 0
-    // };
-    // int servo_on(void)
-    // {
-    //     uint16_t execution_res;
-    //     uint32_t status_value;
-    //     return SET_STATE_VALUE_WITHMASK_4(288, SVON, SVON, execution_res, status_value);
-    // }
-    // int servo_off(void)
-    // {
-    //     uint16_t execution_res;
-    //     uint32_t status_value;
-    //     return SET_STATE_VALUE_WITHMASK_4(288, 0, SVON, execution_res, status_value);
-    // }
-    // int fw(void)
-    // {
-    //     uint16_t execution_res;
-    //     uint32_t status_value;
-    //     return SET_STATE_VALUE_WITHMASK_4(288, VCRUN2, VCRUN1 | VCRUN2, execution_res, status_value);
-    // }
-    // int rev(void)
-    // {
-    //     uint16_t execution_res;
-    //     uint32_t status_value;
-    //     return SET_STATE_VALUE_WITHMASK_4(288, VCRUN1, VCRUN1 | VCRUN2, execution_res, status_value);
-    // }
-    // int stop(void)
-    // {
-    //     ;
-    //     uint16_t execution_res;
-    //     uint32_t status_value;
-    //     return SET_STATE_VALUE_WITHMASK_4(288, 0, VCRUN1 | VCRUN2, execution_res, status_value);
-    // }
-    // int set_speed(uint i)
-    // {
-    //     uint32_t speed[] = {0, VCSEL1, VCSEL2, VCSEL1 | VCSEL2, VCSEL3, VCSEL3 | VCSEL1, VCSEL3 | VCSEL2, VCSEL3 | VCSEL1 | VCSEL2};
-    //     i = max(1, min(abs(i), sizeof(speed) / sizeof(speed[0])));
-    //     i--;
-    //     Serial.printf("i=%d\n", i);
-    //     uint16_t execution_res;
-    //     uint32_t status_value;
-    //     return SET_STATE_VALUE_WITHMASK_4(288, speed[i], VCSEL1 | VCSEL2 | VCSEL3, execution_res, status_value);
-    // }
-
+   
     int set_ext_speed(int frequency, uint long duration = 5)
     {
         digitalWrite(dir_pin, (frequency > 0));
